@@ -1,20 +1,28 @@
 from sklearn.cluster import KMeans
 import numpy as np
 
+import matplotlib
+matplotlib.use('Agg')
+
 import word_analyzer
 import matplotlib.pyplot as plt
-
 
 def fitKMeans(list_words):
     vectors = []
     for word in list_words:
+        avg_syllable_len=0
         word_len = len(word);
         syllables = word_analyzer.syllables(word)
-        syllab_count = len(syllables);
-        vectors.append([word_len, syllab_count])
+        for syllable in syllables:
+             avg_syllable_len+=len(syllable)
+        avg_syllable_len+=1
+        syllab_count = len(syllables)+1;
+        vectors.append([word_len/avg_syllable_len, avg_syllable_len/syllab_count])
+        if(word_len/avg_syllable_len>0.8)and(avg_syllable_len/syllab_count>3):
+              print(word)
     array = np.array(vectors)
 
-    kmeans = KMeans(n_clusters=2, random_state=0).fit(array)
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(array)
     print(kmeans.labels_)
     print(kmeans.predict([[0, 0], [4, 4]]))
     print(kmeans.cluster_centers_)
@@ -46,11 +54,11 @@ def fitKMeans(list_words):
     plt.scatter(centroids[:, 0], centroids[:, 1],
                 marker='x', s=169, linewidths=3,
                 color='w', zorder=10)
-    plt.title('K-means clustering on the digits dataset (PCA-reduced data)\n'
+    plt.title('K-means clustering on candidate words data (Word lengt, number of syllables)\n'
               'Centroids are marked with white cross')
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     plt.xticks(())
     plt.yticks(())
-    plt.savefig("plot")
-    plt.show()
+    plt.savefig('plot.png')
+#   plt.show()
