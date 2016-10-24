@@ -1,3 +1,5 @@
+import codecs
+
 end_punct = ('.', '!', '?')
 tags_replace = ('<i>', '</i>', '<b>', '</b>', '...')
 
@@ -5,7 +7,7 @@ tags_replace = ('<i>', '</i>', '<b>', '</b>', '...')
 def parseSRT(subtitle_name):
     parsed_subtitle = []
     # Process with opening the input file.
-    with open('subtitles/' + subtitle_name) as f_in:
+    with codecs.open('subtitles/'+subtitle_name, "r", encoding='utf-8', errors='ignore') as f_in:
         # !remove blank lines!
         lines = filter(None, (line.rstrip() for line in f_in))
 
