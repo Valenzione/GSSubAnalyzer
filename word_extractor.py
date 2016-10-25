@@ -101,3 +101,10 @@ def remove_100(words):
         if word.rstrip() in words:
             words.remove(word.rstrip())
     return words
+
+def remove_ogden(words):
+    basic_words = open("dictionaries/ogden_basic", "r")
+    for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
