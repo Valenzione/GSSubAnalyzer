@@ -3,6 +3,7 @@ import nltk
 import re
 
 import threading
+from nltk.stem.wordnet import WordNetLemmatizer
 
 # Symbol	Meaning	        Example
 # S	        sentence	    the man walked
@@ -13,6 +14,7 @@ import threading
 # N	        noun	        dog
 # V	        verb	        walked
 # P	        preposition	    in
+import text_extractor
 
 '''
 Following code get parsed srt files as input and produces a set of candidate words for
@@ -28,6 +30,42 @@ result_list = []  # list with candidate words
 spell_checker = enchant.Dict("en_US")  # Check spelling and eliminate all wrong spelled words
 
 final_entities = set()
+
+
+def extract_words(raw_subtitle, extracted_number):
+    parsed_sentences = text_extractor.parseSRT(raw_subtitle)
+    sub_text = ''.join(str(elem) for elem in parsed_sentences)
+    words_data, lemmed_words = rough_result_set(sub_text)
+    lemmed_words = remove_basic_words(lemmed_words)
+    lemmed_words = remove_top_american(lemmed_words)
+    lemmed_words = remove_tier(lemmed_words, 5)
+    words_data = [record for record in words_data if record[1] in lemmed_words]
+    print(len(words_data), len(lemmed_words))
+    timed_words_data = get_timedelta(words_data, raw_subtitle)
+    for tuple in timed_words_data:
+        print(tuple)
+
+
+def get_timedelta(words_data, raw_subtitle):
+    timed_words_data = list()
+    subtitle_blocks = text_extractor.extractBlocks(raw_subtitle)
+    for block in subtitle_blocks:
+        current_found_words = set();
+        for record in words_data:
+            if (record[0] in block[2]) and (len(record) == 3) and not (record[0] in current_found_words):
+                current_found_words.add(record[0])
+                tuple_list = list(record)
+                time_from, time_to = block[1].split(" --> ")
+                tuple_list.append(time_from)
+                tuple_list.append(time_to)
+                record = tuple(tuple_list)
+                timed_words_data.append(record)
+    return timed_words_data
+
+
+def show_help():
+    for tag in candidate_pos:
+        nltk.help.upenn_tagset(tag)
 
 
 def extract_entities(subtitle_sentences):
@@ -69,42 +107,64 @@ def extract_entities_multithread(subtitle_sentences):
 
 
 def rough_result_set(subtitle_text):
+    lemmatizer = WordNetLemmatizer()
+    lemmed_set = set();
     tokens = nltk.word_tokenize(subtitle_text)  # Create tokens from text
-    words_num=len(tokens)
 
     tagged = nltk.pos_tag(tokens)  # Detect POS for each token
-
-    # Count POS bumbers for every POS TODO: Delete at Release
-    for tag_tuple in tagged:
-        try:
-            pos_number[tag_tuple[1]] += 1
-        except KeyError:
-            pos_number[tag_tuple[1]] = 1
 
     # If spell check is passed and POS is one of the candidate POS's, then append it to result list.
     for tag_tuple in tagged:
         for pos in candidate_pos:
-            if (tag_tuple[1] == pos) and (spell_checker.check(tag_tuple[0])):
-                result_list.append(tag_tuple[0].lower())
+            if (tag_tuple[1] == pos):
+                new_word = tag_tuple[0].lower()
 
-    fdist = nltk.FreqDist(tokens)  # Erase most popular?
-    for x in fdist.most_common(words_num//10):
-        if x[0].lower() in result_list:
-            result_list.remove(x[0].lower())
+                if (tag_tuple[1] in ('VBD', 'VBG', 'VBP', 'VB', 'VBZ')):
+                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'v')
+                if (tag_tuple[1] in ('NN', 'NNS')):
+                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'n')
+                if (spell_checker.check(new_word)) and len(new_word) > 2 and spell_checker.check(tag_tuple[0]):
+                    result_list.append((tag_tuple[0], new_word.lower(), tag_tuple[1]))
+                    lemmed_set.add(new_word.lower())
+                    # fdist = nltk.FreqDist(tokens)  # Erase 10% of most popular words among tokens.
+                    # for x in fdist.most_common(words_num // 10):
+                    #     if x[0].lower() in result_list:
+                    #         result_list.remove(x[0].lower())
 
-    return set(result_list)
+    return result_list, lemmed_set
 
 
-def remove_100(words):
-    basic_words = open("dictionaries/100basic_words", "r")
+# Check user level! Thousands of words, or ogden basical-level
+
+def remove_basic_words(words):
+    basic_words = open("dictionaries/basicDictionary", "r")
     for word in basic_words:
         if word.rstrip() in words:
             words.remove(word.rstrip())
     return words
 
+
 def remove_ogden(words):
     basic_words = open("dictionaries/ogden_basic", "r")
     for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
+
+
+def remove_top_american(words):
+    basic_words = open("dictionaries/popularityDict", "r")
+    for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
+
+
+# Tiers are 500 words!
+def remove_tier(words, tier):
+    basic_words = open("dictionaries/10tiersDictionary", "r")
+    b_words = basic_words.read().splitlines()
+    for word in b_words[:tier * 500]:
         if word.rstrip() in words:
             words.remove(word.rstrip())
     return words

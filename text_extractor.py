@@ -5,11 +5,11 @@ end_punct = ('.', '!', '?')
 tags_replace = ('<i>', '</i>', '<b>', '</b>', '...')
 
 
-def parseSRT(f_in):
+def parseSRT(raw_subtitle):
     parsed_subtitle = []
     # Process with opening the input file.
     # !remove blank lines!
-    lines = filter(None, (line.rstrip() for line in f_in))
+    lines = filter(None, (line.rstrip() for line in raw_subtitle))
 
     incomplete_sentence = ""
     # remove unnecessary lines and write it to a new file
@@ -37,33 +37,17 @@ def parseSRT(f_in):
 
     return parsed_subtitle
 
-
-def chunkSRT(f_in, chunks_num):
-    subtitle_chunks = list()
-    lines = f_in.read().splitlines()
-    for line in lines[::-1]:
-        if '-->' in line and line.startswith('0'):
-            last_line = line[line.find('-->') + 3:].replace(' ', '')
-            break
-    for line in lines:
-        if '-->' in line and line.startswith('0'):
-            first_line = line[line.find('-->') + 3:].replace(' ', '')
-            break
-    last_time = datetime.strptime(last_line, '%H:%M:%S,%f')
-    first_time = datetime.strptime(first_line, '%H:%M:%S,%f')
-    rest_time = (last_time - first_time) // chunks_num
-
-    current_time = timedelta()
-    current_chunk = 0
-    for line in lines:
-        if '-->' in line and line.startswith('0'):
-            time_line = line[line.find('-->') + 3:].replace(' ', '')
-            current_time = datetime.strptime(time_line, '%H:%M:%S,%f') - first_time
-        if (current_time > rest_time * (current_chunk + 1)):
-            current_chunk += 1
-        if (len(subtitle_chunks) < current_chunk + 1):
-            subtitle_chunks.append(line)
+def extractBlocks(raw_subtitle):
+    blocks = list()
+    buffer = list()
+    for line in raw_subtitle:
+        if not line.strip():
+            blocks.append(buffer)
+            buffer = list()
         else:
-            subtitle_chunks[current_chunk] += line
+            if (len(buffer) >= 3):
+                buffer.append(buffer.pop(2) + " " + line)
+            else:
+                buffer.append(line)
 
-    return subtitle_chunks
+    return blocks
