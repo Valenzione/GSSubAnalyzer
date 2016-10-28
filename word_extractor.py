@@ -140,7 +140,8 @@ def get_timedelta(words_data, raw_subtitle):
     for itemt in timed_words_data:
         for item in duplicates:
             if (item[:2] == itemt[:2]):
-                timed_words_data.remove(item)
+                if (timed_words_data.index(item) != -1):
+                    timed_words_data.remove(item)
 
     return timed_words_data
 
