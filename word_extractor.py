@@ -50,12 +50,11 @@ def jsonify(final_words):
         dict_record['pos'] = x[2]
         dict_record['start_time'] = str(x[3])
         dict_record['end_time'] = str(x[4])
-        dict_record['translation'] = word_info.get_translation(x[1])
-        dict_record['defenition'] = word_info.get_defenition(x[1], x[2])
-        dict_record['example'] = word_info.get_example(x[1])
+        # dict_record['translation'] = word_info.get_translation(x[1])
+        # dict_record['defenition'] = word_info.get_defenition(x[1], x[2])
+        # dict_record['example'] = word_info.get_example(x[1])
         result_list.append(dict_record)
     return json.dumps(result_list)
-    print("HeY")
 
 
 def extract_words(filename, word_num_to_ex):
@@ -74,8 +73,6 @@ def extract_words(filename, word_num_to_ex):
     last_wordtime = timed_words_data[::-1][0][4]
     first_wordtime = timed_words_data[0][4]
 
-    print(first_wordtime)
-    print(last_wordtime)
     time_delta = (last_wordtime - first_wordtime) / word_num_to_ex
     borders = list()
     border = first_wordtime
@@ -100,7 +97,6 @@ def extract_words(filename, word_num_to_ex):
     for x in timeline:
         final_words.append(random.choice(x))
 
-    print(len(final_words))
     return final_words
 
 
@@ -232,7 +228,7 @@ def show_help():
 
 def extract_entities(subtitle_sentences):
     entities = set()
-    print(len(subtitle_sentences))
+
     for sentence in subtitle_sentences:
         tokens = nltk.word_tokenize(sentence)
         pos_tagged = nltk.pos_tag(tokens)
