@@ -1,8 +1,16 @@
+import codecs
+import json
+import random
+import string
+
+from datetime import datetime, timedelta
 import enchant
 import nltk
 import re
 
 import threading
+
+import time
 from nltk.stem.wordnet import WordNetLemmatizer
 
 # Symbol	Meaning	        Example
@@ -15,6 +23,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 # V	        verb	        walked
 # P	        preposition	    in
 import text_extractor
+import word_info
 
 '''
 Following code get parsed srt files as input and produces a set of candidate words for
@@ -32,7 +41,26 @@ spell_checker = enchant.Dict("en_US")  # Check spelling and eliminate all wrong 
 final_entities = set()
 
 
-def extract_words(raw_subtitle, extracted_number):
+def jsonify(final_words):
+    result_list = list()
+    for x in final_words:
+        dict_record = dict()
+        dict_record['word'] = x[0]
+        dict_record['lemma'] = x[1]
+        dict_record['pos'] = x[2]
+        dict_record['start_time'] = str(x[3])
+        dict_record['end_time'] = str(x[4])
+        dict_record['translation'] = word_info.get_translation(x[1])
+        dict_record['defenition'] = word_info.get_defenition(x[1], x[2])
+        dict_record['example'] = word_info.get_example(x[1])
+        result_list.append(dict_record)
+    return json.dumps(result_list)
+    print("HeY")
+
+
+def extract_words(filename, word_num_to_ex):
+    subtitle_reader = codecs.open('uploads/' + filename, "r", encoding='utf-8', errors='ignore')
+    raw_subtitle = subtitle_reader.read().splitlines()
     parsed_sentences = text_extractor.parseSRT(raw_subtitle)
     sub_text = ''.join(str(elem) for elem in parsed_sentences)
     words_data, lemmed_words = rough_result_set(sub_text)
@@ -40,27 +68,161 @@ def extract_words(raw_subtitle, extracted_number):
     lemmed_words = remove_top_american(lemmed_words)
     lemmed_words = remove_tier(lemmed_words, 5)
     words_data = [record for record in words_data if record[1] in lemmed_words]
-    print(len(words_data), len(lemmed_words))
     timed_words_data = get_timedelta(words_data, raw_subtitle)
-    for tuple in timed_words_data:
-        print(tuple)
+    print("Timed words: ", len(timed_words_data), "Words: ", len(words_data), "Unique lemmas:", len(lemmed_words))
+    extracted_words = list();
+    last_wordtime = timed_words_data[::-1][0][4]
+    first_wordtime = timed_words_data[0][4]
+
+    print(first_wordtime)
+    print(last_wordtime)
+    time_delta = (last_wordtime - first_wordtime) / word_num_to_ex
+    borders = list()
+    border = first_wordtime
+    for x in range(0, word_num_to_ex):
+        border += time_delta
+        borders.append(border)
+
+    tm1 = timed_words_data
+    timeline = list()
+    for x in borders:
+        borderlist = list()
+        for w in timed_words_data:
+            wordtime = w[4]
+            if wordtime <= x:
+                timed_words_data.remove(w)
+                borderlist.append(w)
+            else:
+                timeline.append(borderlist)
+                break
+
+    final_words = list()
+    for x in timeline:
+        final_words.append(random.choice(x))
+
+    print(len(final_words))
+    return final_words
 
 
 def get_timedelta(words_data, raw_subtitle):
     timed_words_data = list()
     subtitle_blocks = text_extractor.extractBlocks(raw_subtitle)
+    translator = str.maketrans({key: " " for key in string.punctuation})
+
+    duplicates = list();
+
     for block in subtitle_blocks:
-        current_found_words = set();
+
+        block[2] = re.sub("<[^>]*>", "", block[2])
+        block[2] = block[2].translate(translator)
+
         for record in words_data:
-            if (record[0] in block[2]) and (len(record) == 3) and not (record[0] in current_found_words):
-                current_found_words.add(record[0])
+            if (record[0] in block[2].split(" ")):
+                block[2] = block[2].replace(record[0], "", 1)
                 tuple_list = list(record)
                 time_from, time_to = block[1].split(" --> ")
+
+                time_from = datetime.strptime(time_from, "%H:%M:%S,%f")
+                time_from = timedelta(hours=time_from.hour, minutes=time_from.minute,
+                                      seconds=time_from.second)
+
+                time_to = datetime.strptime(time_to, "%H:%M:%S,%f")
+                time_to = timedelta(hours=time_to.hour, minutes=time_to.minute,
+                                    seconds=time_to.second)
+
                 tuple_list.append(time_from)
                 tuple_list.append(time_to)
                 record = tuple(tuple_list)
+
+                for item in timed_words_data:
+                    iteml = list(item)[:3]
+                    if iteml == tuple_list[:3]:
+                        duplicates.append(record)
+                        break
                 timed_words_data.append(record)
+
+    for itemt in timed_words_data:
+        for item in duplicates:
+            if (item[:2] == itemt[:2]):
+                timed_words_data.remove(item)
+
     return timed_words_data
+
+
+def rough_result_set(subtitle_text):
+    lemmatizer = WordNetLemmatizer()
+    lemmed_set = set();
+    tokens = nltk.word_tokenize(subtitle_text)  # Create tokens from text
+
+    names = codecs.open('dictionaries/allNames', "r", encoding='utf-8', errors='ignore').read().splitlines()
+
+    tagged = nltk.pos_tag(tokens)  # Detect POS for each token
+
+    # If spell check is passed and POS is one of the candidate POS's, then append it to result list.
+    for tag_tuple in tagged:
+        for pos in candidate_pos:
+            if (tag_tuple[1] == pos):
+                new_word = tag_tuple[0].lower()
+
+                if (tag_tuple[1] in ('VBD', 'VBG', 'VBP', 'VB', 'VBZ')):
+                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'v')
+                if (tag_tuple[1] in ('NN', 'NNS')):
+                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'n')
+
+                # remove names
+                if tag_tuple[0].lower() in names or new_word.lower() in names:
+                    continue
+
+                if (spell_checker.check(new_word)) and len(new_word) > 2 and spell_checker.check(tag_tuple[0]):
+                    result_list.append((tag_tuple[0], new_word.lower(), tag_tuple[1]))
+                    lemmed_set.add(new_word.lower())
+
+    # remove 10% of most popular tokens
+    fdist = nltk.FreqDist(tokens)
+    for x in fdist.most_common(len(tokens) // 10):
+        for item in result_list:
+            if item[0] == x:
+                result_list.remove(item)
+                if item[1] in lemmed_set:
+                    lemmed_set.remove(item[1])
+
+    return result_list, lemmed_set
+
+
+# Check user level! Thousands of words, or ogden basical-level
+
+def remove_basic_words(words):
+    basic_words = open("dictionaries/basicDictionary", "r")
+    for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
+
+
+def remove_ogden(words):
+    basic_words = open("dictionaries/ogden_basic", "r")
+    for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
+
+
+def remove_top_american(words):
+    basic_words = open("dictionaries/popularityDict", "r")
+    for word in basic_words:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
+
+
+# Tiers are 500 words!
+def remove_tier(words, tier):
+    basic_words = open("dictionaries/10tiersDictionary", "r")
+    b_words = basic_words.read().splitlines()
+    for word in b_words[:tier * 500]:
+        if word.rstrip() in words:
+            words.remove(word.rstrip())
+    return words
 
 
 def show_help():
@@ -104,67 +266,3 @@ def extract_entities_multithread(subtitle_sentences):
     for t in threads:
         t.join()
     print(final_entities)
-
-
-def rough_result_set(subtitle_text):
-    lemmatizer = WordNetLemmatizer()
-    lemmed_set = set();
-    tokens = nltk.word_tokenize(subtitle_text)  # Create tokens from text
-
-    tagged = nltk.pos_tag(tokens)  # Detect POS for each token
-
-    # If spell check is passed and POS is one of the candidate POS's, then append it to result list.
-    for tag_tuple in tagged:
-        for pos in candidate_pos:
-            if (tag_tuple[1] == pos):
-                new_word = tag_tuple[0].lower()
-
-                if (tag_tuple[1] in ('VBD', 'VBG', 'VBP', 'VB', 'VBZ')):
-                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'v')
-                if (tag_tuple[1] in ('NN', 'NNS')):
-                    new_word = lemmatizer.lemmatize(tag_tuple[0], 'n')
-                if (spell_checker.check(new_word)) and len(new_word) > 2 and spell_checker.check(tag_tuple[0]):
-                    result_list.append((tag_tuple[0], new_word.lower(), tag_tuple[1]))
-                    lemmed_set.add(new_word.lower())
-                    # fdist = nltk.FreqDist(tokens)  # Erase 10% of most popular words among tokens.
-                    # for x in fdist.most_common(words_num // 10):
-                    #     if x[0].lower() in result_list:
-                    #         result_list.remove(x[0].lower())
-
-    return result_list, lemmed_set
-
-
-# Check user level! Thousands of words, or ogden basical-level
-
-def remove_basic_words(words):
-    basic_words = open("dictionaries/basicDictionary", "r")
-    for word in basic_words:
-        if word.rstrip() in words:
-            words.remove(word.rstrip())
-    return words
-
-
-def remove_ogden(words):
-    basic_words = open("dictionaries/ogden_basic", "r")
-    for word in basic_words:
-        if word.rstrip() in words:
-            words.remove(word.rstrip())
-    return words
-
-
-def remove_top_american(words):
-    basic_words = open("dictionaries/popularityDict", "r")
-    for word in basic_words:
-        if word.rstrip() in words:
-            words.remove(word.rstrip())
-    return words
-
-
-# Tiers are 500 words!
-def remove_tier(words, tier):
-    basic_words = open("dictionaries/10tiersDictionary", "r")
-    b_words = basic_words.read().splitlines()
-    for word in b_words[:tier * 500]:
-        if word.rstrip() in words:
-            words.remove(word.rstrip())
-    return words

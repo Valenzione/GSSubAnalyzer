@@ -13,6 +13,8 @@ key=<API key>
  & [format=<text format>]
  & [options=<translation options>]
  & [callback=<name of the callback function>]"""
+
+
 def get_translation(word):
     params = dict(
         text=word,
@@ -26,13 +28,34 @@ def get_translation(word):
 def get_example(word):
     url = wordnikApiUrl + """/word.json/""" + word + """/topExample?useCanonical=true&api_key=""" + wordnikApiKey
     resp = requests.get(url=url)
-    data = json.loads(resp.text)
-    return data['text']
+    if (json.loads(resp.text)):
+        data = json.loads(resp.text)
+        return data['text']
+    else:
+        return None
 
 
 def get_defenition(word, pos):
+    nltkToWordnikPos = {
+        'VBD': 'verb',
+        'VBG': 'verb',
+        'VB': 'verb',
+        'RB': 'adverb',
+        'JJS': 'adjective',
+        'RBR': 'adverb',
+        'NN': 'noun',
+        'NNS': 'noun-plural',
+        'VBZ': 'verb',
+        'VBP': 'verb'
+    }
+    pos = nltkToWordnikPos[pos]
+
     url = wordnikApiUrl + """/word.json/""" + word + """/definitions?limit=5&partOfSpeech=""" + pos + \
           """&includeRelated=true&sourceDictionaries=all&useCanonical=true&includeTags=false&api_key=""" + wordnikApiKey
     resp = requests.get(url=url)
-    data = json.loads(resp.text)[0]
-    return data['text']
+    if (json.loads(resp.text)):
+        data = json.loads(resp.text)[0]
+        return data['text']
+    else:
+        return None
+
