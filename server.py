@@ -19,6 +19,8 @@ from flask import Flask
 app = Flask(__name__)
 MAX_FILE_SIZE = 16 * 1024 * 1024
 UPLOAD_FOLDER = '/path/to/the/uploads'
+# set as part of the config
+SECRET_KEY = 'many random bytes'
 ALLOWED_EXTENSIONS = set(['srt'])
 app.config['UPLOAD_FOLDER'] = "uploads/"
 

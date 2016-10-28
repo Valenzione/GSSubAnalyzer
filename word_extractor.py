@@ -33,9 +33,7 @@ lexical analysis.
 3.Get result from Entity Extractor and remove those items from set of candidate words
 '''
 candidate_pos = ('VBD', 'VBG', 'VB', 'RB', 'JJS', 'RBR', 'NN', 'NNS', 'VBZ', 'VBP')
-pos_number = {}  # dictionary for number of pos
 persons = []  # list with person names.
-result_list = []  # list with candidate words
 spell_checker = enchant.Dict("en_US")  # Check spelling and eliminate all wrong spelled words
 
 final_entities = set()
@@ -140,13 +138,14 @@ def get_timedelta(words_data, raw_subtitle):
     for itemt in timed_words_data:
         for item in duplicates:
             if (item[:2] == itemt[:2]):
-                if (timed_words_data.index(item) != -1):
+                if (item in timed_words_data):
                     timed_words_data.remove(item)
 
     return timed_words_data
 
 
 def rough_result_set(subtitle_text):
+    result_list = list()  # list with candidate words
     lemmatizer = WordNetLemmatizer()
     lemmed_set = set();
     tokens = nltk.word_tokenize(subtitle_text)  # Create tokens from text
