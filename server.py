@@ -59,7 +59,7 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            words_list = extract_words(filename, words_quantity)
+            words_list = extract_words(filename, words_quantity, diffculty)
             return jsonify(words_list)
 
     return "Only POST queries"
@@ -72,4 +72,4 @@ def allowed_file(filename):
 
 if __name__ == '__main__':
     app.secret_key = os.urandom(24)
-    app.run(host='0.0.0.0',debug=True)
+    app.run(host='0.0.0.0', debug=True)

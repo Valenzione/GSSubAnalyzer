@@ -53,7 +53,7 @@ def jsonify(final_words):
     return json.dumps(result_list)
 
 
-def extract_words(filename, word_num_to_ex):
+def extract_words(filename, word_num_to_ex, difficulty):
     subtitle_reader = codecs.open('uploads/' + filename, "r", encoding='utf-8', errors='ignore')
     raw_subtitle = subtitle_reader.read().splitlines()
     parsed_sentences = text_extractor.parseSRT(raw_subtitle)
@@ -61,7 +61,7 @@ def extract_words(filename, word_num_to_ex):
     words_data, lemmed_words = rough_result_set(sub_text)
     lemmed_words = remove_basic_words(lemmed_words)
     lemmed_words = remove_top_american(lemmed_words)
-    lemmed_words = remove_tier(lemmed_words, 5)
+    lemmed_words = remove_tier(lemmed_words, difficulty * 2)
     words_data = [record for record in words_data if record[1] in lemmed_words]
     timed_words_data = get_timedelta(words_data, raw_subtitle)
     print("Timed words: ", len(timed_words_data), "Words: ", len(words_data), "Unique lemmas:", len(lemmed_words))
