@@ -48,9 +48,7 @@ def jsonify(final_words):
         dict_record['pos'] = x[2]
         dict_record['start_time'] = str(x[3])
         dict_record['end_time'] = str(x[4])
-        # dict_record['translation'] = word_info.get_translation(x[1])
-        # dict_record['defenition'] = word_info.get_defenition(x[1], x[2])
-        # dict_record['example'] = word_info.get_example(x[1])
+
         result_list.append(dict_record)
     return json.dumps(result_list)
 
@@ -67,6 +65,8 @@ def extract_words(filename, word_num_to_ex):
     words_data = [record for record in words_data if record[1] in lemmed_words]
     timed_words_data = get_timedelta(words_data, raw_subtitle)
     print("Timed words: ", len(timed_words_data), "Words: ", len(words_data), "Unique lemmas:", len(lemmed_words))
+    if (len(lemmed_words) > word_num_to_ex):
+        word_num_to_ex = len(lemmed_words) / 2
     extracted_words = list();
     last_wordtime = timed_words_data[::-1][0][4]
     first_wordtime = timed_words_data[0][4]
@@ -92,8 +92,10 @@ def extract_words(filename, word_num_to_ex):
                 break
 
     final_words = list()
+
     for x in timeline:
-        final_words.append(random.choice(x))
+        if x:
+            final_words.append(random.choice(x))
 
     return final_words
 
@@ -103,10 +105,9 @@ def get_timedelta(words_data, raw_subtitle):
     subtitle_blocks = text_extractor.extractBlocks(raw_subtitle)
     translator = str.maketrans({key: " " for key in string.punctuation})
 
-    duplicates = list();
+    duplicates = list()
 
-    for block in subtitle_blocks:
-
+    for block in subtitle_blocks[1:]:
         block[2] = re.sub("<[^>]*>", "", block[2])
         block[2] = block[2].translate(translator)
 
@@ -116,11 +117,11 @@ def get_timedelta(words_data, raw_subtitle):
                 tuple_list = list(record)
                 time_from, time_to = block[1].split(" --> ")
 
-                time_from = datetime.strptime(time_from, "%H:%M:%S,%f")
+                time_from = datetime.strptime(time_from, "%H:%M:%S.%f")
                 time_from = timedelta(hours=time_from.hour, minutes=time_from.minute,
                                       seconds=time_from.second)
 
-                time_to = datetime.strptime(time_to, "%H:%M:%S,%f")
+                time_to = datetime.strptime(time_to, "%H:%M:%S.%f")
                 time_to = timedelta(hours=time_to.hour, minutes=time_to.minute,
                                     seconds=time_to.second)
 

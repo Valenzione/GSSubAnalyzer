@@ -11,6 +11,8 @@ from flask import flash
 
 from flask import request
 
+from flask import abort
+
 import main
 import json
 from word_extractor import extract_words, jsonify
@@ -18,33 +20,49 @@ from flask import Flask
 
 app = Flask(__name__)
 MAX_FILE_SIZE = 16 * 1024 * 1024
-UPLOAD_FOLDER = '/path/to/the/uploads'
+# UPLOAD_FOLDER = '/path/to/the/uploads'
 # set as part of the config
 SECRET_KEY = 'many random bytes'
-ALLOWED_EXTENSIONS = set(['srt'])
+ALLOWED_EXTENSIONS = {'vtt'}
 app.config['UPLOAD_FOLDER'] = "uploads/"
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/subdata', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
+
         # check if the post request has the file part
         if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+            "No file send"
+
+        if 'difficulty' not in request.args:
+            return "No difficulty parameter"
+
+        diffculty = int(request.args.get('difficulty'))
+        if diffculty > 5 or diffculty < 1:
+            return "Improper difficulty: must be [1;5]"
+
+        if 'words' not in request.args:
+            return "No words parameter"
+
+        words_quantity = int(request.args.get("words"))
+        if words_quantity < 0:
+            return "Words must be posiive number"
+
         file = request.files['file']
         # if user does not select file, browser also
         # submit a empty part without filename
+
         if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
+            return "Invalid filename"
+
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            words_list = extract_words(filename,5)
+            words_list = extract_words(filename, words_quantity + 1)
             return jsonify(words_list)
-    return "Hey!"
 
+    return "Hey!"
 
 
 def allowed_file(filename):
@@ -53,4 +71,5 @@ def allowed_file(filename):
 
 
 if __name__ == '__main__':
+    app.secret_key = os.urandom(24)
     app.run(debug=True)

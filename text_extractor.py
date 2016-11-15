@@ -13,6 +13,7 @@ def parseSRT(raw_subtitle):
 
     incomplete_sentence = ""
     # remove unnecessary lines and write it to a new file
+    lines = list(lines)[1:]
     for line in lines:
         # Ignore the numeric ID of each text
         if line.isdigit() and len(line) < 6:
@@ -36,6 +37,7 @@ def parseSRT(raw_subtitle):
             incomplete_sentence = ""
 
     return parsed_subtitle
+
 
 def extractBlocks(raw_subtitle):
     blocks = list()
