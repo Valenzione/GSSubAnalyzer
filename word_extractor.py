@@ -65,20 +65,22 @@ def extract_words(filename, word_num_to_ex):
     words_data = [record for record in words_data if record[1] in lemmed_words]
     timed_words_data = get_timedelta(words_data, raw_subtitle)
     print("Timed words: ", len(timed_words_data), "Words: ", len(words_data), "Unique lemmas:", len(lemmed_words))
-    if (len(lemmed_words) > word_num_to_ex):
-        word_num_to_ex = len(lemmed_words) / 2
-    extracted_words = list();
+    if (len(lemmed_words) < word_num_to_ex):
+        word_num_to_ex = len(lemmed_words) // 2
+
     last_wordtime = timed_words_data[::-1][0][4]
     first_wordtime = timed_words_data[0][4]
 
     time_delta = (last_wordtime - first_wordtime) / word_num_to_ex
     borders = list()
     border = first_wordtime
+
     for x in range(0, word_num_to_ex):
         border += time_delta
         borders.append(border)
 
-    tm1 = timed_words_data
+    print(borders)
+
     timeline = list()
     for x in borders:
         borderlist = list()
@@ -90,6 +92,7 @@ def extract_words(filename, word_num_to_ex):
             else:
                 timeline.append(borderlist)
                 break
+    timeline.append(borderlist)
 
     final_words = list()
 
@@ -148,7 +151,7 @@ def get_timedelta(words_data, raw_subtitle):
 def rough_result_set(subtitle_text):
     result_list = list()  # list with candidate words
     lemmatizer = WordNetLemmatizer()
-    lemmed_set = set();
+    lemmed_set = set()
     tokens = nltk.word_tokenize(subtitle_text)  # Create tokens from text
 
     names = codecs.open('dictionaries/allNames', "r", encoding='utf-8', errors='ignore').read().splitlines()

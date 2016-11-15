@@ -38,14 +38,14 @@ def upload_file():
         if 'difficulty' not in request.args:
             return "No difficulty parameter"
 
-        diffculty = int(request.args.get('difficulty'))
+        diffculty = int(request.args['difficulty'])
         if diffculty > 5 or diffculty < 1:
             return "Improper difficulty: must be [1;5]"
 
         if 'words' not in request.args:
             return "No words parameter"
 
-        words_quantity = int(request.args.get("words"))
+        words_quantity = int(request.args["words"])
         if words_quantity < 0:
             return "Words must be posiive number"
 
@@ -59,10 +59,10 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            words_list = extract_words(filename, words_quantity + 1)
+            words_list = extract_words(filename, words_quantity)
             return jsonify(words_list)
 
-    return "Hey!"
+    return "Only POST queries"
 
 
 def allowed_file(filename):
