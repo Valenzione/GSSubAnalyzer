@@ -65,6 +65,9 @@ def extract_words(filename, word_num_to_ex, difficulty):
     words_data = [record for record in words_data if record[1] in lemmed_words]
     timed_words_data = get_timedelta(words_data, raw_subtitle)
     print("Timed words: ", len(timed_words_data), "Words: ", len(words_data), "Unique lemmas:", len(lemmed_words))
+    mltest = open("mltest.txt", "a+")
+    mltest.write(str(words_data))
+    mltest.close()
     if (len(lemmed_words) < word_num_to_ex):
         word_num_to_ex = len(lemmed_words) // 2
 
@@ -118,7 +121,7 @@ def get_timedelta(words_data, raw_subtitle):
             if (record[0] in block[2].split(" ")):
                 block[2] = block[2].replace(record[0], "", 1)
                 tuple_list = list(record)
-                time_from, time_to = block[1].split(" --> ")
+                time_from, time_to = block[1][0:29].split(" --> ")
 
                 time_from = datetime.strptime(time_from, "%H:%M:%S.%f")
                 time_from = timedelta(hours=time_from.hour, minutes=time_from.minute,
