@@ -46,9 +46,11 @@ def jsonify(final_words):
         dict_record['word'] = x[0]
         dict_record['lemma'] = x[1]
         dict_record['pos'] = x[2]
-        dict_record['start_time'] = str(x[3])
-        dict_record['end_time'] = str(x[4])
-
+        dict_record['start_time'] = str(x[3].total_seconds()*1000)
+        dict_record['end_time'] = str(x[4].total_seconds()*1000)
+        dict_record['translation'] = word_info.get_translation(x[1])
+        dict_record['definition'] = word_info.get_defenition(x[1], x[2])
+        dict_record['example'] = word_info.get_example(x[1])
         result_list.append(dict_record)
     return json.dumps(result_list)
 
@@ -82,7 +84,7 @@ def extract_words(filename, word_num_to_ex, difficulty):
         border += time_delta
         borders.append(border)
 
-    print(borders)
+    #print(borders)
 
     timeline = list()
     for x in borders:
@@ -102,7 +104,7 @@ def extract_words(filename, word_num_to_ex, difficulty):
     for x in timeline:
         if x:
             final_words.append(random.choice(x))
-
+    print(final_words)
     return final_words
 
 
@@ -241,7 +243,7 @@ def extract_entities(subtitle_sentences):
         pos_tagged = nltk.pos_tag(tokens)
         tree_chunk = nltk.chunk.ne_chunk(pos_tagged)
         for child_node in tree_chunk:
-            # print(child_node) #TODO: Gavnokod
+            # print(child_node) #TODO: 
             name = ""
             node_text = str(child_node)
             if "PERSON" in node_text:
