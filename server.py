@@ -84,8 +84,8 @@ def upload_file():
             return "No words parameter"
 
         words_quantity = int(request.args["words"])
-        if words_quantity < 0:
-            return "Words must be posiive number"
+        if words_quantity < -1:
+            return "Invalid words quantity"
 
         # check if the post request has the file part
         if 'file' not in request.files:
