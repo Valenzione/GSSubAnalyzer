@@ -70,13 +70,17 @@ def extract_words(filename, word_num_to_ex, difficulty):
     mltest = open("mltest.txt", "a+")
     mltest.write(str(words_data))
     mltest.close()
-    if (len(lemmed_words) < word_num_to_ex):
-        word_num_to_ex = len(lemmed_words) // 2
+
+    if (word_num_to_ex == -1) or (len(lemmed_words) < word_num_to_ex):
+        word_num_to_ex = len(lemmed_words) // 4
+        if (word_num_to_ex < 4):
+            word_num_to_ex = 4
 
     last_wordtime = timed_words_data[::-1][0][4]
     first_wordtime = timed_words_data[0][4]
 
     time_delta = (last_wordtime - first_wordtime) / word_num_to_ex
+
     borders = list()
     border = first_wordtime
 
