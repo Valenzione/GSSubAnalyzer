@@ -60,6 +60,7 @@ def upload_file():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             words_list = extract_words(filename, words_quantity, diffculty)
+            #print(words_list)
             return jsonify(words_list)
 
     return "Only POST queries"
