@@ -15,7 +15,10 @@ from flask import abort
 
 import main
 import json
-from word_extractor import extract_words, jsonify
+
+import word_info
+from db_helper import learn_word, get_quiz_words
+from word_extractor import extract_words
 from flask import Flask
 
 app = Flask(__name__)
@@ -25,6 +28,41 @@ MAX_FILE_SIZE = 16 * 1024 * 1024
 SECRET_KEY = 'many random bytes'
 ALLOWED_EXTENSIONS = {'vtt'}
 app.config['UPLOAD_FOLDER'] = "uploads/"
+
+
+def quizify(words_list):
+    quiz_candidates = get_quiz_words()
+
+    for x in words_list:
+        if x['lemma'] in quiz_candidates:
+            x['quiz'] = 'true'
+        else:
+            x['quiz'] = 'false'
+    return words_list
+
+
+def get_words_info(final_words):
+    result_list = list()
+    for x in final_words:
+        dict_record = dict()
+        dict_record['word'] = x[0]
+        dict_record['lemma'] = x[1]
+        dict_record['pos'] = x[2]
+        dict_record['start_time'] = str(x[3].total_seconds() * 1000)
+        dict_record['end_time'] = str(x[4].total_seconds() * 1000)
+        dict_record['translation'] = word_info.get_translation(x[1])
+        dict_record['definition'] = word_info.get_defenition(x[1], x[2])
+        dict_record['example'] = word_info.get_example(x[1])
+        result_list.append(dict_record)
+    return result_list
+
+
+@app.route('/check_later', methods=['GET'])
+def check_word_later():
+    if 'word' not in request.args:
+        return "Submit word"
+    learn_word(request.args['word'])
+    return "Succes!"
 
 
 @app.route('/subdata', methods=['POST'])
@@ -49,6 +87,9 @@ def upload_file():
         if words_quantity < 0:
             return "Words must be posiive number"
 
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            "No file send"
         file = request.files['file']
         # if user does not select file, browser also
         # submit a empty part without filename
@@ -60,8 +101,9 @@ def upload_file():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             words_list = extract_words(filename, words_quantity, diffculty)
-            #print(words_list)
-            return jsonify(words_list)
+            advices = get_words_info(words_list)
+            quiz_words = quizify(advices)
+            return json.dumps(quiz_words)
 
     return "Only POST queries"
 
